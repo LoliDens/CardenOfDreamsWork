@@ -7,7 +7,7 @@ public class SaveLoadBuilding : ISaveLoadBuildingService
     private const string FILE_NAME = "buildingData";
     private const string FORMAT_NAME = ".json";
 
-    public void Save(List<Building> buildings, Vector2Int size)
+    public void SaveData(List<Building> buildings, Vector2Int size)
     {
         BuildingInfo[] buildingsInfo = new BuildingInfo[buildings.Count];
 
@@ -20,7 +20,7 @@ public class SaveLoadBuilding : ISaveLoadBuildingService
         File.WriteAllText(GetFilePath(), json);
     }
 
-    public bool Load(out BuildingGridData data)
+    public bool LoadData(out BuildingGridData data)
     {
         string path = GetFilePath();
 
