@@ -27,6 +27,8 @@ public class SceneLoader
         while (!waitNextScene.isDone)
             yield return null;
 
+        yield return new WaitForSeconds(0.5f);
+
         onLoaded?.Invoke();
     }
 }

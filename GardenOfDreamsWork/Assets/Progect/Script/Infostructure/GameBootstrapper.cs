@@ -15,4 +15,7 @@ public class GameBootstrapper : MonoBehaviour,ICoroutineRunner
 
         DontDestroyOnLoad(this);
     }
+
+    public static void Print(object o) =>
+        Debug.Log(o);
 }

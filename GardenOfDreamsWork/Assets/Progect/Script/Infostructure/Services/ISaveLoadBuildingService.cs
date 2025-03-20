@@ -3,6 +3,6 @@ using UnityEngine;
 
 public interface ISaveLoadBuildingService : IService
 {
-    bool Load(out BuildingGridData data);
-    void Save(List<Building> buildings, Vector2Int size);
+    bool LoadData(out BuildingGridData data);
+    void SaveData(List<Building> buildings, Vector2Int size);
 }

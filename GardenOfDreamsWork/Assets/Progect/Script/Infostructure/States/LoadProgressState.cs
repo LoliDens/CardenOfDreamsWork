@@ -2,6 +2,8 @@
 
 public class LoadProgressState : IState
 {
+    private readonly Vector2Int LevelSize = new Vector2Int(6, 10);//TEST VALUE
+
     private readonly GameStateMachine _gameStateMachine;
     private readonly ISaveLoadBuildingService _saveLoadBuilding;
 
@@ -21,7 +23,7 @@ public class LoadProgressState : IState
 
     private BuildingGridData LoadProgressOrInitNew()
     {
-        if (_saveLoadBuilding.Load(out BuildingGridData data))        
+        if (_saveLoadBuilding.LoadData(out BuildingGridData data))        
             return data;
       
         return CreateNewBuildingData();       
@@ -29,7 +31,7 @@ public class LoadProgressState : IState
 
     private BuildingGridData CreateNewBuildingData()
     {
-        var size = new Vector2Int(6, 10);
+        var size = LevelSize;
         return new BuildingGridData(size);
     }
 }

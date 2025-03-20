@@ -14,7 +14,7 @@ public class GameStateMachine
             [typeof(BootstrapState)] = new BootstrapState(this, sceneLoader, allServices,playerInput),
             [typeof(LoadProgressState)] = new LoadProgressState(this,allServices.Single<ISaveLoadBuildingService>()),
             [typeof(LoadLevelState)] = new LoadLevelState(this,sceneLoader,loadingCurtain,
-                allServices.Single<IPlayerInputService>(), allServices.Single<ISaveLoadBuildingService>())
+            allServices.Single<IPlayerInputService>(), allServices.Single<ISaveLoadBuildingService>(), allServices.Single<IGameFactory>())
         };
     }
 

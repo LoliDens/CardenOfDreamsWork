@@ -7,55 +7,65 @@ public class BuildingGrid : MonoBehaviour
 {
     private const string NAME_LAYER_BULDING = "Building";
 
-    private ISaveLoadBuildingService _saveLoadBuilding;
-    private IPlayerInputService _playerInputService;
+    private readonly ISaveLoadBuildingService _saveLoadBuilding;
+    private readonly IGameFactory _gameFactory;
+    private readonly IPlayerInputService _playerInputService;
+
+    private UIBuildingManipulator _manipulator;
+    private LevelVisual _levelVisual;
+
     private Vector2Int _gridSize;
-
-    [SerializeField] private Transform _startCreatePoint;
-    [SerializeField] private Tilemap _tilemap;
-    [SerializeField] private GameObject _gridVisual;
-
-    [SerializeField] private List<Building> _buildingsVariant;//затычка 
-
     private Building[,] _grid;
-    private List<Building> _allBuildings;
+    private Transform _startPoint;
+    private Tilemap _tilemap;
+    private List<Building> _allBuildings = new();
+
     private Building _selectBuilding;
     private Building _flyingBuilding;
     private Vector3 _mousePositionToTilemap;
 
-    public void SelectBuilding(Building building) =>
-        _selectBuilding = building;
-
-    private Vector2Int GetVectorTwoMousePos() => Vector2Int.RoundToInt(
-            (Vector2)(_mousePositionToTilemap - _startCreatePoint.position));
-
-    public void Constrict(IPlayerInputService playerInput,ISaveLoadBuildingService saveLoadBuilding,BuildingGridData data)
+    public BuildingGrid(IPlayerInputService playerInput,ISaveLoadBuildingService saveLoadBuilding,
+       IGameFactory gameFactory ,BuildingGridData data)
     {
         _playerInputService = playerInput;
         _saveLoadBuilding = saveLoadBuilding;
+        _gameFactory = gameFactory;
+
+        CreateLevelToData(data);
+    }
+
+    private void SelectBuilding(Building building) =>
+       _selectBuilding = building;
+
+    private Vector2Int GetVectorTwoMousePos() => Vector2Int.RoundToInt(
+            (Vector2)(_mousePositionToTilemap - _startPoint.position));
+
+    private void CreateLevelToData(BuildingGridData data)
+    {
         _gridSize = data.GridSize;
         _grid = new Building[_gridSize.x, _gridSize.y];
-        _allBuildings = new();
 
-        if (data.AllBuildings != null)//Затычка
+        _manipulator = _gameFactory.CreateUI();
+        _levelVisual = _gameFactory.CreteLevelVisual();
+
+        _manipulator.StartPlaceBuilding += StartPlaceBuilding;
+        _manipulator.StartDeletedBuilding += StartDeletedBuilding;
+        _manipulator.SubscribeOnSelectBuilding(SelectBuilding);
+
+        _startPoint = _levelVisual.GetStartPoint();
+        _tilemap = _levelVisual.GetMainTilemap();
+
+        foreach (var buildingInfo in data.AllBuildings)
         {
-            foreach (var buildingInfo in data.AllBuildings)
-            {
-                foreach (var variant in _buildingsVariant)
-                {
-                    if (variant.GetInfo().BuildingData.Id == buildingInfo.BuildingData.Id)
-                    {
-                        Building building = Instantiate(variant);
-                        building.SetToBuildingInfo(buildingInfo,_grid);
-                        _allBuildings.Add(building);
-                    }
-                }
-            }
+            var building = _gameFactory.CreateBuilding(buildingInfo, _grid);
+            _allBuildings.Add(building);
         }
     }
 
-    public void StartPlaceBuilding()
+    private void StartPlaceBuilding()
     {
+        GameBootstrapper.Print(_selectBuilding);
+
         if (_selectBuilding == null)
             return;
 
@@ -67,18 +77,18 @@ public class BuildingGrid : MonoBehaviour
 
         _flyingBuilding = Instantiate(_selectBuilding, _mousePositionToTilemap,Quaternion.identity);
 
-        _gridVisual.SetActive(true);
+        _levelVisual.SetVisualTilemap(true);
     }
 
-    public void StartDeletedBuilding()
+    private void StartDeletedBuilding()
     {
         _playerInputService.RegisterActionMouseLeftClick(DeletedBuilding);
-        _gridVisual.SetActive(true);
+        _levelVisual.SetVisualTilemap(true);
     }
 
     private void DeletedBuilding()
     {
-        var plane = new Plane(Vector3.forward, _startCreatePoint.transform.position);
+        var plane = new Plane(Vector3.forward, _startPoint.transform.position);
         RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(_playerInputService.MouseMove), Vector2.zero, LayerMask.GetMask(NAME_LAYER_BULDING));
 
         if (hit.collider != null)
@@ -90,14 +100,14 @@ public class BuildingGrid : MonoBehaviour
             Destroy(building.gameObject);
 
             _playerInputService.UnregisterActionMouseLeftClick(DeletedBuilding);
-            _gridVisual.SetActive(false);
-            _saveLoadBuilding.Save(_allBuildings, _gridSize);
+            _levelVisual.SetVisualTilemap(false);
+            _saveLoadBuilding.SaveData(_allBuildings, _gridSize);
         }
     }
 
     private void MovingBuilding(Vector2 mousePosition)
     {
-        var plane = new Plane(Vector3.forward, _startCreatePoint.transform.position);
+        var plane = new Plane(Vector3.forward, _startPoint.transform.position);
         var ray = Camera.main.ScreenPointToRay(mousePosition);
 
         if (plane.Raycast(ray, out float position) && !EventSystem.current.IsPointerOverGameObject())
@@ -118,7 +128,7 @@ public class BuildingGrid : MonoBehaviour
 
     private void PlaceBuilding()
     {
-        var endPosition = new Vector3(_startCreatePoint.position.x + _gridSize.x, _startCreatePoint.position.y + _gridSize.y, 0);
+        var endPosition = new Vector3(_startPoint.position.x + _gridSize.x, _startPoint.position.y + _gridSize.y, 0);
         var mousePositionToGrid = GetVectorTwoMousePos(); 
 
         if (CanPlaceFlyingBuilding())
@@ -126,21 +136,21 @@ public class BuildingGrid : MonoBehaviour
             _flyingBuilding.PlaceOnGrid(mousePositionToGrid, _grid);
             _allBuildings.Add(_flyingBuilding);
             _flyingBuilding = null;
-            _gridVisual.SetActive(false);
+            _levelVisual.SetVisualTilemap(false);
 
             _playerInputService.UnregisterActionMouseLeftClick(PlaceBuilding);
             _playerInputService.UnregisterActionMouseMove(MovingBuilding);
 
-            _saveLoadBuilding.Save(_allBuildings, _gridSize);
+            _saveLoadBuilding.SaveData(_allBuildings, _gridSize);
         }        
     }
 
     private bool CanPlaceFlyingBuilding()
     {
-        var endPosition = new Vector3(_startCreatePoint.position.x + _gridSize.x, _startCreatePoint.position.y + _gridSize.y, 0);
+        var endPosition = new Vector3(_startPoint.position.x + _gridSize.x, _startPoint.position.y + _gridSize.y, 0);
         var mousePositionToGrid = GetVectorTwoMousePos();
 
         return _flyingBuilding.CanBePlace(_mousePositionToTilemap, mousePositionToGrid,
-                _startCreatePoint.position, endPosition, _grid);
+                _startPoint.position, endPosition, _grid);
     }
 }

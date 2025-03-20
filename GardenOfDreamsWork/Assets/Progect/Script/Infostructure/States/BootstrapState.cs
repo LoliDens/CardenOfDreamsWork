@@ -35,7 +35,17 @@ public class BootstrapState : IState
 
     private void RegisterServices()
     {
-        _services.RegisterSingle<ISaveLoadBuildingService>(new SaveLoadBuilding());
+        RegisterStaticData();
+
+        _services.RegisterSingle<ISaveLoadBuildingService>(new SaveLoadBuildingService());
         _services.RegisterSingle<IPlayerInputService>(new PlayerInput(_inputActions));
+        _services.RegisterSingle<IGameFactory>(new GameFactory(_services.Single<IStaticDataService>()));
+    }
+
+    private void RegisterStaticData()
+    {
+        var staticData = new StaticDataService();
+        staticData.LoadBuildings();
+        _services.RegisterSingle<IStaticDataService>(staticData);
     }
 }
